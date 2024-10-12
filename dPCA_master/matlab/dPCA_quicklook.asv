@@ -1,0 +1,174 @@
+% first version to construct dataset for dPCA (N*S*M*T*R)
+% very simple and crude, just for glimpse
+% addapted from dpca_demo.m
+
+% trialNum: N * S * M  (0 heading is excluded, only correct trials)
+% firingRates: N * S * M * T * maxTrialNum (20 repetitions)
+% firingRatesAverage: N * S * M * T
+
+% N is the number of neurons
+% S is the number of headings
+% M is the number of conditions (ves, vis & comb)
+% T is the number of time-points (note that all the trials should have the
+% same length in time !)
+
+% trialNum: number of trials for each neuron in each S, M condition (is
+% usually different for different conditions and differernt sessions)
+
+% firingRates: all single-trial data together, massive array. Here
+% maxTrialNum is the maximum value in trialNum. E.g. if the number of
+% trials per condition varied between 1 and 20, then maxTrialNum = 20. For
+% the neurons and conditions with less trials, fill remaining entries in
+% firingRates with zeros or nans. 
+
+% firingRatesAverage: average of firingRates over trials (5th dimension).
+% If the firingRates is filled up with nans, then it's simply
+%    firingRatesAverage = nanmean(firingRates, 5);
+% if it's filled up with zeros (as is convenient if it's stored on hard
+% drive as a sparse matrix), then 
+%     firingRatesAverage = bsxfun(@times, mean(firingRates,5), size(firingRate, 5)./trialNum);
+
+clear all; 
+
+
+% cd('Z:\Data\Tempo\Batch\CDSUsHeading')
+cd('Z:\Data\Tempo\Batch\CDSUsHDALL20210411')
+
+
+dataFileList = ls('*PSTH.mat'); 
+
+% for n = 1:length(dataFileList)
+%     load(dataFileList(n,:));
+%     fieldNames = fieldnames(result);
+%     for f = 1:size(fieldNames,1)
+%         fieldNames{f}{n} = result.(fieldNames{f});
+% %         result.(fieldNames{f})(n,:) = result.(fieldNames{f});
+%     end
+% end
+
+for n = 1:length(dataFileList)
+    load(dataFileList(n,:));
+    time = result.rate_ts;    % each neuron has the same time window
+    firingRates_raw{n,1} = result.PSTH;
+end
+
+N = length(dataFileList);  % number of neurons
+T = 180;                   % number of time points (before saccade and aligned with stimulus onset)
+S = 8;                     % 8 headings (0 is excluded)
+C = 3;                     % 2 modalities, so 3 conditions
+R = 20;                    % maximal number of trial repetitions
+D = 2;                     % number of decisions
+
+%%%%%%%%%%
+%Because the directions of stimulus and choice are totally related, so 
+% When only correct trials are included, conditionNum = S * C
+% When false trials are included, conditionNum = S * C * D
+
+%% PartI. Only correct trial are included
+
+for n = 1:length(firingRates_raw)
+    firingRates_temp{n} = firingRates_raw{n}(1,2,:);  % only time period before saccade and aligned with stimulus onset
+    for c = 1:size(firingRates_temp{n},3)
+            for s = 1: size(firingRates_temp{n}{c}.raw,1)
+                toBeAppended = nan((20-size(firingRates_temp{n}{c}.raw{s},1)), size(firingRates_temp{n}{c}.raw{s},2));  % fill empty repetition with nan
+                firingRates_temp{n}{c}.raw{s} = ([firingRates_temp{n}{c}.raw{s}; toBeAppended])';
+            end
+                firingRates_temp_tomat{n}{c} = cell2mat(firingRates_temp{n}{c}.raw(3:end));
+                firingRates_correctOnly_temp{n}{c} = permute(reshape(firingRates_temp_tomat{n}{c}, T,S,R),[2,1,3]);  % original order is 200*8*20 
+    end
+    firingRates_correctOnly_percell{n} = permute(reshape(cell2mat(firingRates_correctOnly_temp{n}),S,T,C,R),[1,3,2,4]);
+end
+
+firingRates_correctOnly = permute(reshape(cell2mat(firingRates_correctOnly_percell),S,C,N,T,R),[3,1,2,4,5]);
+
+% only care preferred and non-preferred choice
+firingRates_pref = nanmean(firingRates_correctOnly(:,mod(1:8,2)==1,:,:,:),2);
+firingRates_nonpref = nanmean(firingRates_correctOnly(:,mod(1:8,2)==0,:,:,:),2);
+firingRates_choiceCorrectOnly = permute([firingRates_pref firingRates_nonpref], [1,3,2,4,5]);
+
+% computing PSTHs
+firingRatesAverage = nanmean(firingRates_choiceCorrectOnly, 5);
+
+% Define parameter grouping 
+% *** Do not change this if you don't know what you are doing! ***
+% firingRates array has [ N S C T R] size; here we ignore the 1st dimension
+% (neurons), i.e. we have the following parameters:
+%   1 - stimulus
+%   2 - modality
+%   3 - time
+% So there are three pairwise interactions:
+%  [1 3] - stimulus/time interaction
+%  [2 3] - decision/time interaction
+%  [1 2] - stimulus/decision interaction
+% And one three-way interaction:
+%  [1 2 3] - rest
+% I group stimulus with stimulus/time interaction etc.:
+
+combinedParams = {{1,[1 3]}, {2,[2,3]}, {3}, {[1 2], [1 2 3]}};
+margNames = {'Modality', 'Choice', 'Condition-independent', 'M/C Interaction'};
+margColours = [23 100 171; 187 20 25; 150 150 150; 114 97 171]/256;
+
+% Time events of interest ( stimulus onset or saccade onset)
+% They are marked on the plots with vertical lines
+timeEvents = time{1}(find(time{1} >= 0, 1));
+
+%% Step 1: PCA of the dataset
+
+X = firingRatesAverage(:,:);
+X = bsxfun(@minus, X, mean(X,2));
+
+[W,~,~] = svd(X, 'econ');
+W = W(:, 1:20);
+
+% minimal plotting 
+dpca_plot(firingRatesAverage, W, W, @dpca_plot_default);
+
+% computing explained variance
+explVar = dpca_explainedVariance(firingRatesAverage, W, W, ...
+    'combinedParams', combinedParams);
+
+% a bit more informative plotting
+dpca_plot(firingRatesAverage, W, W, @dpca_plot_default, ...
+    'explainedVar', explVar, ...
+    'time', time{1},                        ...
+    'timeEvents', timeEvents,               ...
+    'marginalizationNames', margNames, ...
+    'marginalizationColours', margColours);
+
+%% Step 2: PCA in each marginalization separately
+
+dpca_perMarginalization(firingRatesAverage, @dpca_plot_default, ...
+   'combinedParams', combinedParams);
+
+%% Step 3: dPCA without regularization and ignoring noise covariance
+
+% This is the core function.
+% W is the decoder, V is the encoder (ordered by explained variance),
+% whichMarg is an array that tells you which component comes from which
+% marginalization
+
+tic
+[W,V,whichMarg] = dpca(firingRatesAverage, 20, ...
+    'combinedParams', combinedParams);
+toc
+
+explVar = dpca_explainedVariance(firingRatesAverage, W, V, ...
+    'combinedParams', combinedParams);
+
+dpca_plot(firingRatesAverage, W, V, @dpca_plot_default, ...
+    'explainedVar', explVar, ...
+    'marginalizationNames', margNames, ...
+    'marginalizationColours', margColours, ...
+    'whichMarg', whichMarg,                 ...
+    'time', time{1},                        ...
+    'timeEvents', timeEvents,               ...
+    'timeMarginalization', 3, ...
+    'legendSubplot', 16);
+
+
+
+
+    
+    
+    
+
