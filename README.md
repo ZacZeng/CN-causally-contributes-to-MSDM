@@ -27,3 +27,5 @@ Download this code package.
 6. For GDDM fittings of behavioral data in RT-version multisensory heading discrimination task, source code is from [DrugowitschLab](https://github.com/DrugowitschLab/OptimalMultisensoryDecisionMakingwithRT). For running,
    * First make the Current Folder in MATLAB as [`dm-0.1.1`](https://github.com/ZacZeng/CN-causally-contributes-to-MSDM/tree/main/OptimalMultisensoryDecisionMakingwithRT/shared/ddm/dm-0.1.1).
    * Print `fit_model('Monkey_M','mf_sepk',100)` in the Command Window.
+   * Set a Breakpoints in the script of `fit_model` at line ~ 135.
+   * Print `plot_fits(subj_id,model_fn)`, you can get the fitting results in Figure 4.
