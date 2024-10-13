@@ -11,7 +11,7 @@ Download the [dataset](https://zenodo.org/records/13923317) and gunzip it.
 Download this code package. 
 
 ## Instructions
-1. Add all MATLAB files to the default path in MATLAB.
+1. Add all files to the MATLAB path.
 2. Print `Group_GUI` in the Command Window to get the GUI named as **Group Data Analyzer**.  **NOTE: You need to change the default directories in some scripts into the correct local position in your computer!!!**
    * Click `Read Data Hub` to load the contents in file **DataHub.xlsm**.
    * After reading, click `CD Heading` to load neurophysiological data, 'Microstimulation' for electric stimulation data, or `Psychometric` for behavioral data.
@@ -29,3 +29,9 @@ Download this code package.
    * Print `fit_model('Monkey_M','mf_sepk',100)` in the Command Window.
    * Set a Breakpoints in the script of `fit_model` at line ~ 135.
    * Print `plot_fits(subj_id,model_fn)`, you can get the fitting results in Figure 4.
+
+## Acknowledgement
+Group Analysis pipeline is established by [Han Hou](https://github.com/hanhou/Labtools)
+RNN simulations are performed by Ce Zhang.
+dPCA package is from [Here](https://github.com/machenslab/dPCA)
+GDDM package is from [DrugowitschLab](https://github.com/DrugowitschLab/OptimalMultisensoryDecisionMakingwithRT)
