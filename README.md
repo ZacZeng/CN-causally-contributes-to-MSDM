@@ -31,7 +31,7 @@ Download this code package.
    * Print `plot_fits(subj_id,model_fn)`, you can get the fitting results in Figure 4.
 
 ## Acknowledgement
-Group Analysis pipeline is established by [Han Hou](https://github.com/hanhou/Labtools)
-RNN simulations are performed by Ce Zhang.
-dPCA package is from [Here](https://github.com/machenslab/dPCA)
-GDDM package is from [DrugowitschLab](https://github.com/DrugowitschLab/OptimalMultisensoryDecisionMakingwithRT)
+Group Analysis pipeline is established by [Han Hou](https://github.com/hanhou/Labtools).  
+RNN simulations are performed by Ce Zhang.  
+dPCA package is from [Here](https://github.com/machenslab/dPCA).  
+GDDM package is from [DrugowitschLab](https://github.com/DrugowitschLab/OptimalMultisensoryDecisionMakingwithRT).
